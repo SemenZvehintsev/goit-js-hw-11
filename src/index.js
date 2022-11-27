@@ -52,7 +52,7 @@ function imagesInfo() {
 
 function createGallery(data) {
     if (data.length > 0) {
-        markup = data.map(image => 
+        const markup = data.map(image => 
             `<div class="gallery__photo-card">
                 <a class="gallery__item" href="${image.largeImageURL}">
                     <img class="gallery__image" src="${image.webformatURL}" alt="${image.tags}" loading="lazy" /> 
