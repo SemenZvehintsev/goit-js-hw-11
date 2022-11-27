@@ -7,84 +7,92 @@ import 'simplelightbox/dist/simple-lightbox.min.css';
 const inputText = document.querySelector('input')
 const formSearch = document.querySelector('.search-form')
 const gallery = document.querySelector('.gallery')
+const loadMoreBtn = document.querySelector('.load-more')
+const lightbox = new SimpleLightbox('.gallery a', { });
+let pageNumber = 1;
 
 formSearch.addEventListener('submit', searchImgs)
 
 const key = '31495001-d7fca89852a5b5217d905cd4a';
 
-let pageNumber = 0;
-
+let searchImg = '';
+let numberOfImgs = 0;
 function searchImgs(event) {
-    pageNumber += 1;
-    event.preventDefault()
-    const searchImg = inputText.value.split(' ').join('+')
-    console.log(searchImg)
-    axios.get(`https://pixabay.com/api/?key=${key}q=${searchImg}&image_type=photo&orientation=horizontal&safesearch=true&page=${pageNumber}&per_page=40`)
+    event.preventDefault();
+    searchImg = inputText.value.split(' ').join('+');
+    gallery.innerHTML=''
+    pageNumber = 1
+    getImages()
+}
+
+function getImages() {
+    axios(`https://pixabay.com/api/?key=${key}&q=${searchImg}&image_type=photo&orientation=horizontal&safesearch=true&page=${pageNumber}&per_page=40`)    
     .then(response => {
-        console.log(response.data)
-        console.log(response.statusText)
+        numberOfImgs = response.data.total;
         return response.data})
     .then(headers => headers.hits)
-    .then(hits => onlyOneFound(hits))
+    .then(hits => {
+        createGallery(hits)
+        loadBtn(hits)
+        imagesInfo()
+        endOfImgsList()})
     .catch(error => console.log(error.message))
-
 }
 
+function endOfImgsList() {
+    if (numberOfImgs > 0 && numberOfImgs === gallery.childNodes.length) {
+        loadMoreBtn.style.display = 'none'
+        Notiflix.Notify.failure("We're sorry, but you've reached the end of search results.")
+    }
+}
 
-function onlyOneFound(data) {
-    gallery.innerHTML=''
+function imagesInfo() {
+    if (numberOfImgs && pageNumber === 1) {Notiflix.Notify.info(`Hooray! We found ${numberOfImgs} images.`)}
+}
+
+function createGallery(data) {
     if (data.length > 0) {
         markup = data.map(image => 
-            `<a href="${image.largeImageURL}" style="text-decoration: none" >
-                <img src="${image.webformatURL}" alt="${image.tags}" loading="lazy" /> 
-                <div class="info" style="display: flex" style="gap: 20px" style="padding: 5px">
-                    <p class="info-item" style="margin: 10px">
+            `<div class="gallery__photo-card">
+                <a class="gallery__item" href="${image.largeImageURL}">
+                    <img class="gallery__image" src="${image.webformatURL}" alt="${image.tags}" loading="lazy" /> 
+                </a>
+                <div class="gallery__info">
+                    <p class="gallery__info-item">
                         <b>Likes</b>
-                        </br>
-                        ${image.likes}
+                        <span>${image.likes}</span>
                     </p>
-                    <p class="info-item" style="margin: 10px">
-                        <b>Views</b>
-                        </br>               
-                        ${image.views}
+                    <p class="gallery__info-item">
+                        <b>Views</b>         
+                        <span>${image.views}</span>
                     </p>
-                    <p class="info-item" style="margin: 10px">
+                    <p class="gallery__info-item">
                         <b>Comments</b>
-                        </br>
-                        ${image.comments}
+                        <span>${image.comments}</span>
                     </p>
-                    <p class="info-item" style="margin: 10px">
+                    <p class="gallery__info-item">
                         <b>Downloads</b>
-                        </br>
-                        ${image.downloads}
+                        <span>${image.downloads}</span>
                     </p>
                 </div>
-              </a>`
+            </div>`
             ).join('')
-            gallery.insertAdjacentHTML('afterbegin', markup);
+        gallery.insertAdjacentHTML('beforeend', markup);      
 
-            
+        lightbox.refresh()
+        return
     } 
-    
-
+    Notiflix.Notify.failure("Sorry, there are no images matching your search query. Please try again.")
 }
 
-let lightbox = new SimpleLightbox('.gallery a', { });
+function loadBtn(data) {
+    if (data.length > 0) {
+        loadMoreBtn.style.display = 'block'
+        loadMoreBtn.addEventListener('click', pageCount)
+    }
+}
 
-// <div class="photo-card">
-//   <img src="" alt="" loading="lazy" />
-//   <div class="info">
-//     <p class="info-item">
-//       <b>Likes</b>
-//     </p>
-//     <p class="info-item">
-//       <b>Views</b>
-//     </p>
-//     <p class="info-item">
-//       <b>Comments</b>
-//     </p>
-//     <p class="info-item">
-//       <b>Downloads</b>
-//     </p>
-//   </div>
-// </div>
+function pageCount() {
+    pageNumber += 1;
+    getImages()
+}
